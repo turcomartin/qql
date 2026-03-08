@@ -93,6 +93,13 @@
       "skill": "Actualizar skill file"
     }
   },
+  "edaRefresh": {
+    "title": "Análisis de datos",
+    "subtitle": "Generado automáticamente por el agente EDA",
+    "prompt": "¿Deseas regenerar los insights para las tablas seleccionadas, o continuar con el análisis existente?",
+    "regenerate": "Regenerar insights",
+    "useExisting": "Usar el análisis existente"
+  },
   "dataContext": {
     "title": "Contexto de datos",
     "subtitle": "Generado automáticamente por el agente EDA",

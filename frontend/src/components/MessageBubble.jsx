@@ -84,12 +84,11 @@ export default function MessageBubble({ message, onSend, onClear }) {
 
   const isUser = role === "user";
 
-  // Show analyst block if there's thinking content OR if streaming hasn't produced
-  // any consulting/text yet (means analyst is still waiting for its first chunk)
-  const showAnalystBlock = !isUser && (
-    thinkingText ||
-    (!thinkingDone && isStreaming && !consultingStatus && !text)
-  );
+  // Show analyst block only when there is actual analyst content.
+  // Previously, condition 2 showed a blinking cursor before any content arrived,
+  // but it caused a flash: the block appeared on message creation, then vanished
+  // the moment the first "consulting" event set consultingStatus.
+  const showAnalystBlock = !isUser && Boolean(thinkingText);
 
   const showSqlThoughtBlock = !isUser && Boolean(sqlThinkingText);
 

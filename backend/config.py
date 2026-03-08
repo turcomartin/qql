@@ -1,4 +1,5 @@
 from typing import Literal
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,9 +9,13 @@ class Settings(BaseSettings):
     )
 
     # Database
-    db_dsn: str = (
-        "postgresql://qql_readonly:someStrongProdPassword@localhost:5435/qql_db"
-    )
+    # qql_readonly_password is the single source of truth for the DB password.
+    # It maps to the QQL_READONLY_PASSWORD env var (used by both the postgres
+    # init script to create the role and by the validator below to build db_dsn).
+    # In Docker, Compose always sets DB_DSN directly (different host/port), so
+    # the validator is only active for local dev runs.
+    qql_readonly_password: str = "someStrongProdPassword"
+    db_dsn: str = ""  # built from qql_readonly_password when DB_DSN env var is absent
     max_query_rows: int = 200
     query_timeout_seconds: int = 30
 
@@ -21,6 +26,14 @@ class Settings(BaseSettings):
     # Set LLM_MODEL=llama3.2:3b to switch Ollama models, or to any model ID
     # supported by the active provider (e.g. gemini-2.0-flash for Vertex).
     llm_model: str = ""
+
+    # LLM sampling / decoding parameters
+    temperature: float = 0.6
+    top_p: float = 0.95
+    top_k: int = 20
+    min_p: float = 0.0
+    presence_penalty: float = 0.0
+    repetition_penalty: float = 1.0
 
     # Ollama
     ollama_base_url: str = "http://ollama:11434"
@@ -58,6 +71,15 @@ class Settings(BaseSettings):
     # compete with the main chat model.  Uses Ollama regardless of the active
     # LLM_PROVIDER.  Leave blank to fall back to the globally active model.
     eda_skill_model: str = "qwen3:8b"
+
+    @model_validator(mode="after")
+    def _build_db_dsn(self) -> "Settings":
+        if not self.db_dsn:
+            self.db_dsn = (
+                f"postgresql://qql_readonly:{self.qql_readonly_password}"
+                "@localhost:5435/qql_db"
+            )
+        return self
 
     @property
     def active_model(self) -> str:

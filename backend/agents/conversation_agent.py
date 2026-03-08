@@ -24,7 +24,7 @@ async def conversation_agent_node(state: AgentState) -> dict:
 
     has_thinking = False
     async for chunk in llm.stream_completion(
-        system_prompt=system_prompt, messages=messages, think=True
+        system_prompt=system_prompt, messages=messages, think=False
     ):
         if chunk.startswith(THINKING_PREFIX):
             has_thinking = True

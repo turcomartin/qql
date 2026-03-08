@@ -20,10 +20,12 @@ SQL prompt design notes (for low-end models like llama3.1:8b):
 # ---------------------------------------------------------------------------
 
 _SQL_SYSTEM_TEMPLATE = """\
+You are a SQL query generator. Your job is to write a single valid PostgreSQL SELECT query that answers the user's question using the provided schema and data cues.
 {lang_note}
 IMPORTANT: Output ONLY a ```sql code block. Do not write any text before or after it.
+IMPORTANT: Do not overthink. You must output a query that runs, even if it's not perfect.
+## Cues
 {cues_block}
-You are a data analyst. Answer the user's question with a single valid PostgreSQL SELECT query.
 
 ## Schema & Data Reference
 {schema}
@@ -31,11 +33,13 @@ You are a data analyst. Answer the user's question with a single valid PostgreSQ
 ## Rules
 1. SELECT only — never INSERT, UPDATE, DELETE, DROP, CREATE, ALTER.
 2. Only reference tables and columns shown in the schema above.
-3. TEXT MATCHING: ILIKE '%term%'. Singular form (e.g. 'balls' → 'ball%'). Truncate long words to root (e.g. 'chocolate' → 'choc%').
+3. TEXT MATCHING: When Query Cues provide ILIKE patterns, use them exactly (they are pre-stemmed). Only apply manual stemming (singular form, root truncation) for columns not covered by the Query Cues.
 4. CATEGORICALS: Use exact values from the [VALUE REFERENCE] sections in the schema.
 5. TIME: PostgreSQL functions only (DATE_TRUNC, EXTRACT).
 6. LIMIT 50 rows. No trailing semicolons.
 7. If the question is ambiguous or data is missing, ask for clarification instead of guessing.
+8. Use the CUES
+9. Apply LEMMATIZATION and STEMMING to text columns, e.g. 'balls' → 'ball%', 'chocolate' → 'choc%'.
 """
 
 _SQL_ANSWER_SYSTEM_TEMPLATE = """\
@@ -128,18 +132,15 @@ Mention that some product names may use abbreviations or alternative spellings.
 
 _ANALYST_SYSTEM_TEMPLATE = """\
 {lang_note}
-You are a business data analyst. Be brief — 1-2 sentences per section.
-The user asked: "{question}"
+You are a business data analyst. The user asked: "{question}"
 
-## Schema & Data Reference
-{schema}
+Schema:
+{schema}{investigation_block}
 
-Dataset: see the Data Context section in the schema for dataset details.{investigation_block}
-
-Respond in exactly these 3 sections (keep each to 1-2 sentences):
+Write a structured analysis in exactly these 3 sections (be brief and to the point):
 ## Business Angle
 ## SQL Challenge
-## Approach
+## Approach (apply lemmatization and stemming to text columns, e.g. 'balls' → 'ball%', 'chocolate' → 'choc%')
 """
 
 

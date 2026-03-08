@@ -2,8 +2,43 @@
 
 _Auto-generated. Your **Notes** are preserved across regenerations._
 
-Last updated: 2026-03-07 19:00 UTC
+Last updated: 2026-03-08 14:13 UTC
 
+
+## Business Domain
+This table stores daily restaurant sales transactions spanning September 21 to November 20, 2024, tracking sold products by waiter, ticket number, and monetary values. The data reflects a high-frequency retail environment with negative totals and quantities indicating returns or adjustments within the same reporting period.
+
+## Column Guide
+- date — transaction timestamp covering a 61-day span in late 2024 (YYYY-MM-DD format)
+- week_day — text label for the day of the week corresponding to the date column
+- hour — time of day without timezone indicating when the sale occurred within the service window
+- ticket_number — unique identifier per transaction starting with prefixes FCA, FCB, NCA, or NCB
+- waiter — employee ID assigned to the transaction (high variance implied by stddev of 21.76)
+- product_name — name of the item sold, dominated by various types of Alfajores and Conitos
+- quantity — number of units sold per line allowing negative values for returns or adjustments
+- unitary_price — cost per individual unit showing wide price distribution (stddev 7603.17 vs avg 6990.29)
+- total — aggregate monetary value per ticket which can be negative, indicating refunds or credits
+
+## Taxonomy
+**Alfajor Varieties**: Alf. 150 aniv. Suelto, Alfador Sin Azucar Suelto, Alfajor choc x un, Alfajor merengue x un
+**Dessert Brands**: Conito choc caja x6un, Conito coco y ddl suelto, Dulce de leche vidrio x450g
+**Packing Formats**: Suelto (loose), caja x12un (box of 12), caja x6un (box of 6), pouch x475g
+
+## Key Metrics
+- Busiest Day: Friday with 4160 distinct transactions
+- Top Product: Alf. 150 aniv. Suelto with 2551 occurrences
+- Typical Unit Price Range: 1900.00 to 10000.00 (P25–P75)
+- Total Transaction Span: 61 days (2024-09-21 to 2024-11-20)
+
+## Business Rules
+Returns/refunds: `quantity < 0`
+Revenue calculation: `sum(quantity * unitary_price)` grouped by product_name
+Filter active waiters: `waiter >= P25 (101.00)` to exclude low-volume outliers
+Negative ticket logic check: `total < 0` identifies refund transactions
+Date range filter: `date BETWEEN '2024-09-21' AND '2024-11-20'`
+
+## Data Quality Notes
+No significant quality issues detected.
 
 ---
 
@@ -21,7 +56,7 @@ Last updated: 2026-03-07 19:00 UTC
 | week_day | text | 7 | 0% | Friday, Monday, Saturday, Sunday, Thursday, … |
 | hour | time without time zone | — | 0% | 09:13:00 → 22:02:00 |
 | ticket_number | text | high | 0% | prefixes: FCA, FCB, NCA, NCB |
-| waiter | integer | 116 | 0% | 0 – 116, avg 93.52, σ 21.76 |
+| waiter | integer | 9 | 0% | 0 – 116, avg 93.52, σ 21.76 |
 | product_name | text | 68 | 0% | top: Alf. 150 aniv. Suelto |
 | quantity | numeric | 25 | 0% | -4.00 – 30.00, avg 1.40, σ 1.11 |
 | unitary_price | numeric | 67 | 0% | 0.00 – 75000.00, avg 6990.29, σ 7603.17 |

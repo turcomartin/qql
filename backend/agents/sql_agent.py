@@ -5,7 +5,8 @@ Retry loop (up to MAX_SQL_RETRIES attempts):
   1. On first attempt: run NLP preprocessing to detect language and find
      candidate product names; store results in state for subsequent retries.
   2. Build prompt with schema + NLP cues + investigation context + previous error
-  3. Stream LLM response → accumulate full text + stream "text" events
+  3. Stream LLM response → buffer preamble, redirect it to "sql_thinking" events;
+     never emit "text" events during generation (summary is emitted post-execution)
   4. Extract ```sql block
   5. Verify SQL (sqlglot AST)
   6. Execute query (asyncpg)
@@ -133,14 +134,14 @@ def _build_cues(state: AgentState) -> str | None:
     if lang:
         lang_label = "Spanish" if lang == "es" else "English"
         lines.append(f"Detected language: {lang_label}")
-    if patterns:
-        lines.append(f"Use these ILIKE patterns (OR-combined): {', '.join(patterns)}")
+    # Candidate names first — concrete proof these products exist in the DB
     if candidates:
-        names = ", ".join(candidates)
-        lines.append(f"Candidate product matches: {names}")
+        lines.append(f"Candidate products found: {', '.join(candidates)}")
+    # Patterns are pre-stemmed by the NLP pipeline; model must use them as-is
+    if patterns:
         lines.append(
-            "Use these candidates in ILIKE filters. "
-            "Do not invent product names not listed here or in the schema."
+            f"MUST use these ILIKE patterns OR-combined — do not invent alternatives: "
+            f"{', '.join(patterns)}"
         )
     return "\n".join(lines) if lines else None
 
@@ -190,29 +191,51 @@ async def sql_agent_node(state: AgentState) -> dict:
     messages = history + [{"role": "user", "content": state["user_message"]}]
 
     # ── Stream LLM response ───────────────────────────────────────────────
-    # Emit each token directly as it arrives — real-time text streaming.
-    # When thinking mode is enabled, native thinking tokens are streamed as
-    # "sql_thinking" events so SQL reasoning is separated from analyst.
+    # Preamble (text before the ```sql block) is redirected to the SQL THOUGHTS
+    # block rather than the chat bubble.  No "text" events are emitted during
+    # generation — only the post-execution natural-language summary becomes text.
+    #
+    # Two paths:
+    #   • Native thinking token (THINKING_PREFIX) — emitted as sql_thinking directly
+    #     (Qwen3, DeepSeek-R1, etc. when think=True is set).
+    #   • Regular preamble (think=False models like llama3.1:8b) — buffered in
+    #     _preamble until the ```sql marker is found, then emitted as sql_thinking.
     full_response = ""
     has_thinking = False
+    _preamble = ""  # accumulates content before the ```sql marker
+    _preamble_emitted = False  # True once sql_thinking/sql_thinking_done have fired
 
     async for chunk in llm.stream_completion(
-        system_prompt=system_prompt, messages=messages, think=False, 
+        system_prompt=system_prompt,
+        messages=messages,
+        think=True,
     ):
         if chunk.startswith(THINKING_PREFIX):
+            # Native thinking token
             has_thinking = True
             await emit({"type": "sql_thinking", "content": chunk[1:]})
         else:
-            # Close thinking block before first content token
             if has_thinking:
+                # Close native thinking block on first content token
                 await emit({"type": "sql_thinking_done"})
                 has_thinking = False
+                _preamble_emitted = True  # native thinking replaces preamble capture
+
             full_response += chunk
-            await emit({"type": "text", "content": chunk})
+
+            if not _preamble_emitted:
+                _preamble += chunk
+                idx = _preamble.lower().find("```sql")
+                if idx >= 0:
+                    _preamble_emitted = True
+                    clean = _preamble[:idx].strip()
+                    if clean:
+                        await emit({"type": "sql_thinking", "content": clean})
+                        await emit({"type": "sql_thinking_done"})
+            # No text events during generation
 
     if has_thinking:
         await emit({"type": "sql_thinking_done"})
-        has_thinking = False
 
     # ── Extract SQL block ─────────────────────────────────────────────────
     match = _SQL_BLOCK_RE.search(full_response)

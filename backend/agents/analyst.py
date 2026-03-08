@@ -7,6 +7,10 @@ a brief structured analysis visible in real-time:
   ## SQL Challenge     — tricky aspects of translating this to SQL
   ## Approach          — how to best answer the query
 
+Assistant prefill ("## Business Angle\\n") is passed as the last message so the
+model is forced to continue from that point — no preamble can appear before the
+first section header.
+
 New SSE events emitted:
   {"type": "thinking", "content": "...chunk..."}  — streaming analyst text
   {"type": "thinking_done"}                        — analysis complete
@@ -31,9 +35,8 @@ from .state import AgentState
 logger = logging.getLogger(__name__)
 
 # Regex to pull content from each section
-
 _ALL_SECTIONS_RE = re.compile(
-    r"##\s*(Business Angle|Ángulo de Negocio|SQL Challenge|Desafío SQL|Approach|Enfoque)\s*\n(.*?)(?=##|\Z)",
+    r"#{1,2}\s*(Business Angle|Ángulo de Negocio|SQL Challenge|Desafío SQL|Approach|Enfoque)\s*\n(.*?)(?=#{1,2}|\Z)",
     re.DOTALL | re.IGNORECASE,
 )
 
@@ -43,6 +46,10 @@ _SECTION_KEYS = {
     "sql challenge": "Challenge",
     "approach": "Approach",
 }
+
+# The prefill text is emitted immediately and passed to the model so it is forced
+# to continue from the first section header with no preamble.
+_ANALYST_PREFILL = "## Business Angle\n"
 
 
 def _extract_analyst_context(text: str) -> str | None:
@@ -76,6 +83,10 @@ async def analyst_node(state: AgentState) -> dict:
     """
     LangGraph node: stream business-analyst reasoning, then return analyst_context
     for injection into the SQL agent's system prompt.
+
+    The assistant prefill (_ANALYST_PREFILL) is emitted immediately and passed as
+    the last message in the conversation so the model continues from the first
+    section header — it cannot generate preamble before it.
     """
     try:
         llm = get_llm_provider()
@@ -86,9 +97,14 @@ async def analyst_node(state: AgentState) -> dict:
             investigation_context=state.get("investigation_context"),
         )
 
-        full_text = ""
+        # Emit the prefix immediately so the analyst block appears right away
+        await emit({"type": "thinking", "content": _ANALYST_PREFILL})
+        full_text = _ANALYST_PREFILL
+
         async for chunk in llm.stream_completion(
-            system_prompt=system_prompt, messages=[], think=False
+            system_prompt=system_prompt,
+            messages=[{"role": "assistant", "content": _ANALYST_PREFILL}],
+            think=False,
         ):
             full_text += chunk
             await emit({"type": "thinking", "content": chunk})

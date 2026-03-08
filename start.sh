@@ -52,6 +52,116 @@ reset_eda() {
 [[ "${1:-}" == "--stop" ]] && stop_all
 [[ "${1:-}" == "--reset-eda" ]] && reset_eda
 
+# Returns 0 if something is already listening on the given local TCP port.
+port_in_use() {
+    local port=$1
+    if command -v nc &>/dev/null; then
+        nc -z localhost "$port" &>/dev/null 2>&1
+    else
+        (echo >/dev/tcp/localhost/"$port") 2>/dev/null
+    fi
+}
+
+# ── Pre-flight: configuration checks ─────────────────────────────────────────
+preflight_check() {
+    local -a errors=()
+
+    echo "Checking configuration..."
+    echo ""
+
+    # .env presence
+    if [[ ! -f ".env" ]]; then
+        echo "  ✗ .env not found"
+        errors+=(".env is missing — copy example.env → .env and fill in the required values.")
+    else
+        echo "  ✓ .env found"
+    fi
+
+    # QQL_READONLY_PASSWORD — without this the DB user is silently never created
+    if [[ -z "${QQL_READONLY_PASSWORD:-}" ]]; then
+        echo "  ✗ QQL_READONLY_PASSWORD is not set"
+        errors+=("QQL_READONLY_PASSWORD is not set. The qql_readonly DB user won't be created and the backend cannot connect. Set it in .env (see example.env).")
+    else
+        echo "  ✓ QQL_READONLY_PASSWORD is set"
+    fi
+
+    # LLM provider credentials
+    case "${LLM_PROVIDER:-ollama}" in
+        openai)
+            if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+                echo "  ✗ LLM_PROVIDER=openai but OPENAI_API_KEY is not set"
+                errors+=("OPENAI_API_KEY is required when LLM_PROVIDER=openai. Set it in .env.")
+            else
+                echo "  ✓ OpenAI API key found"
+            fi
+            ;;
+        bedrock)
+            if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]] && [[ ! -f "$HOME/.aws/credentials" ]]; then
+                echo "  ⚠  LLM_PROVIDER=bedrock: no AWS credentials found (will rely on IAM role)"
+            else
+                echo "  ✓ AWS credentials found"
+            fi
+            ;;
+        vertex)
+            if [[ -z "${GCP_PROJECT:-}" ]]; then
+                echo "  ✗ LLM_PROVIDER=vertex but GCP_PROJECT is not set"
+                errors+=("GCP_PROJECT is required when LLM_PROVIDER=vertex. Set it in .env.")
+            else
+                echo "  ✓ GCP project: ${GCP_PROJECT}"
+            fi
+            ;;
+        ollama|*)
+            echo "  ✓ LLM provider: ${LLM_PROVIDER:-ollama}"
+            ;;
+    esac
+
+    # Docker
+    if ! command -v docker &>/dev/null; then
+        echo "  ✗ docker not found"
+        errors+=("Docker is not installed. See https://docs.docker.com/get-docker/")
+    elif ! docker info &>/dev/null 2>&1; then
+        echo "  ✗ Docker daemon is not running"
+        errors+=("Docker daemon is not running. Start Docker Desktop or run: sudo systemctl start docker")
+    elif ! docker compose version &>/dev/null 2>&1; then
+        echo "  ✗ 'docker compose' (v2) not available"
+        errors+=("'docker compose' v2 is required. Update Docker to a version that bundles Compose v2.")
+    else
+        echo "  ✓ Docker is running"
+    fi
+
+    # Port availability
+    local _pf_os; _pf_os="$(uname -s)"
+    local -a _ports=( 5435        8000           8080       )
+    local -a _pnames=( "PostgreSQL" "Backend API" "Frontend" )
+    # On Linux Ollama runs in Docker and needs 11434.
+    # On macOS the native Ollama section handles "already running" gracefully — skip here.
+    if [[ "$_pf_os" == "Linux" ]]; then
+        _ports+=( 11434 ); _pnames+=( "Ollama" )
+    fi
+    for _pi in "${!_ports[@]}"; do
+        if port_in_use "${_ports[$_pi]}"; then
+            echo "  ✗ Port ${_ports[$_pi]} is already in use (${_pnames[$_pi]})"
+            errors+=("Port ${_ports[$_pi]} is in use — find what's using it: lsof -i :${_ports[$_pi]}")
+        else
+            echo "  ✓ Port ${_ports[$_pi]} is free   (${_pnames[$_pi]})"
+        fi
+    done
+
+    echo ""
+
+    if [[ ${#errors[@]} -gt 0 ]]; then
+        local n=${#errors[@]}
+        echo "  $n error$([ "$n" -gt 1 ] && echo "s") found — fix $([ "$n" -gt 1 ] && echo "them" || echo "it") before re-running ./start.sh"
+        echo ""
+        for _e in "${errors[@]}"; do
+            echo "  → $_e"
+        done
+        echo ""
+        exit 1
+    fi
+}
+preflight_check
+
 # ── Pre-flight: ensure bind-mounted files exist as files (not directories) ────
 # Docker creates a directory when the host path is missing; that breaks the mount.
 for _f in data_context.md skill.md; do

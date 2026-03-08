@@ -34,6 +34,14 @@ class OllamaProvider(LLMProvider):
             "messages": [{"role": "system", "content": system_prompt}, *messages],
             "stream": True,
             "think": think,
+            "options": {
+                "temperature": settings.temperature,
+                "top_p": settings.top_p,
+                "top_k": settings.top_k,
+                "min_p": settings.min_p,
+                "presence_penalty": settings.presence_penalty,
+                "repetition_penalty": settings.repetition_penalty,
+            },
         }
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
             async with client.stream(

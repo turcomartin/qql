@@ -2,8 +2,9 @@
 set -e
 
 if [ -z "$QQL_READONLY_PASSWORD" ]; then
-  echo "QQL_READONLY_PASSWORD is not set; skipping read-only user creation."
-  exit 0
+  echo "ERROR: QQL_READONLY_PASSWORD is not set." >&2
+  echo "Set it in .env (or as an environment variable) and recreate the container." >&2
+  exit 1
 fi
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL

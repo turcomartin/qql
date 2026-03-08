@@ -21,7 +21,7 @@ function renderAnalystText(text) {
   if (!text) return null;
 
   return text.split("\n").map((line, i) => {
-    const headerMatch = line.match(/^##\s+(.+)$/);
+    const headerMatch = line.match(/^#{1,2}\s+(.+)$/);
     if (headerMatch) {
       return (
         <div key={i} className="text-amber-400 font-semibold text-xs uppercase tracking-wide mt-3 mb-0.5 first:mt-0">

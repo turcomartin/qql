@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import ChatWindow from "./components/ChatWindow";
 import DataContextModal from "./components/DataContextModal";
+import EDARefreshModal from "./components/EDARefreshModal";
 import InputBar from "./components/InputBar";
 import ModeToggle from "./components/ModeToggle";
 import OnboardingFlow from "./components/OnboardingFlow";
@@ -24,6 +25,7 @@ export default function App() {
 
   const [skillPanelOpen, setSkillPanelOpen] = useState(false);
   const [dataContextOpen, setDataContextOpen] = useState(false);
+  const [edaRefreshOpen, setEdaRefreshOpen] = useState(false);
   // Skill count shown as a badge on the header 🧠 button.
   // Fetched on mount and refreshed whenever the panel closes (user may have edited).
   const [headerSkillCount, setHeaderSkillCount] = useState(null);
@@ -50,6 +52,7 @@ export default function App() {
   const handleOnboardingComplete = useCallback(({ tables }) => {
     setSelectedTables(tables);
     setOnboarded(true);
+    setEdaRefreshOpen(true); // prompt user about EDA insights after table selection
   }, []);
 
   const reopenOnboarding = useCallback(() => {
@@ -89,6 +92,15 @@ export default function App() {
             title={t("dataContext.title")}
           >
             📘
+          </button>
+          {/* EDA Insights — regenerate or use existing */}
+          <button
+            onClick={() => setEdaRefreshOpen(true)}
+            className={`text-gray-500 hover:text-indigo-400 transition-colors p-1 text-base leading-none
+                        ${edaRefreshOpen ? "text-indigo-400" : ""}`}
+            title={t("edaRefresh.title")}
+          >
+            📖
           </button>
           {/* Skill panel toggle */}
           <button
@@ -166,6 +178,14 @@ export default function App() {
       {/* Data context modal */}
       {dataContextOpen && (
         <DataContextModal onClose={() => setDataContextOpen(false)} />
+      )}
+
+      {/* EDA Insights modal — auto-opens after table selection, also via 📖 button */}
+      {edaRefreshOpen && (
+        <EDARefreshModal
+          onClose={() => setEdaRefreshOpen(false)}
+          onRefreshed={refreshHeaderSkillCount}
+        />
       )}
     </div>
   );
