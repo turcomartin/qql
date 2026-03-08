@@ -99,6 +99,11 @@ The practical consequence is that **results should be treated as estimates** whe
 
 The EDA (Exploratory Data Analysis) agent runs at startup and on demand to build a rich context document (`data_context.md`) that is injected into every SQL generation prompt. Without this, an 8B model has no idea what the table contains and is forced to guess — the EDA front-loads the knowledge so the model can reason accurately.
 
+![Data analysis](topbar.png)
+📘: Explore the extracted insights
+📖 Didn't like them? Regenerate them with a simple click.
+🧠 Add some extra SME insights
+
 ### Four-phase pipeline
 
 ```
