@@ -1,0 +1,17 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+asyncpg==0.29.0
+httpx==0.27.2
+pydantic-settings==2.3.4
+sqlglot==25.0.0
+langgraph==0.2.0
+python-dotenv==1.0.1
+
+# NLP preprocessing (language detection + lemmatisation for SQL query cues)
+spacy==3.7.4
+langdetect==1.0.1
+
+# Optional — uncomment for the provider you use:
+# boto3==1.35.0                   # LLM_PROVIDER=bedrock
+# google-cloud-aiplatform==1.70.0 # LLM_PROVIDER=vertex
+# openai==1.51.0                  # LLM_PROVIDER=openai

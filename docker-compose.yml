@@ -1,0 +1,96 @@
+version: "3.9"
+
+x-backend-env: &backend-env
+  LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+  LLM_MODEL: ${LLM_MODEL:-}
+  OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+  DB_DSN: postgresql://qql_readonly:${QQL_READONLY_PASSWORD}@postgres:5432/qql_db
+  MAX_QUERY_ROWS: ${MAX_QUERY_ROWS:-200}
+  MAX_SQL_RETRIES: ${MAX_SQL_RETRIES:-3}
+  MAX_CONTEXT_TOKENS: ${MAX_CONTEXT_TOKENS:-4096}
+  QUERY_TIMEOUT_SECONDS: ${QUERY_TIMEOUT_SECONDS:-30}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  AWS_REGION: ${AWS_REGION:-us-east-1}
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+  GCP_PROJECT: ${GCP_PROJECT:-}
+  GCP_LOCATION: ${GCP_LOCATION:-us-central1}
+  GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
+  EDA_CONTEXT_PATH: ${EDA_CONTEXT_PATH:-/app/data_context.md}
+  EDA_MAX_AGE_HOURS: ${EDA_MAX_AGE_HOURS:-24}
+  SKILL_PATH: ${SKILL_PATH:-/app/skill.md}
+
+services:
+  # ── 1. PostgreSQL (existing) ──────────────────────────────────────────────
+  postgres:
+    build: .
+    image: qql_postgres:latest
+    container_name: qql_postgres
+    environment:
+      POSTGRES_DB: qql_db
+      POSTGRES_USER: qql_admin
+      POSTGRES_PASSWORD: qql_admin_password
+      QQL_READONLY_PASSWORD: ${QQL_READONLY_PASSWORD}
+    ports:
+      - "5435:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qql_admin -d qql_db"]
+      interval: 5s
+      retries: 10
+
+  # ── 2. Ollama LLM server ─────────────────────────────────────────────────
+  # Runs on all platforms. GPU support depends on host:
+  #   macOS (Apple Silicon): CPU-only inside Docker (Metal is not exposed to containers)
+  #   Linux / CPU-only:      CPU inference
+  #   NVIDIA GPU:            Use the override file:
+  #                          docker compose -f docker_compose.yml -f docker_compose.nvidia.yml up -d
+  #
+  # First run — pull the model:
+  #   docker exec qql_ollama ollama pull llama3.1:8b
+  ollama:
+    image: ollama/ollama:latest
+    container_name: qql_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+  # ── 3. FastAPI backend ────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: qql_backend
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *backend-env
+    volumes:
+      # Bind-mount data_context.md and skill.md so users can read and edit them
+      # on the host. Touch both files first if they don't exist (otherwise Docker
+      # creates directories at those paths instead of files).
+      - ./data_context.md:/app/data_context.md
+      - ./skill.md:/app/skill.md
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── 4. React frontend (production build served by nginx) ─────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: qql_frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
+  ollama_data:

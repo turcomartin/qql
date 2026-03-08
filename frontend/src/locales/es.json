@@ -1,0 +1,107 @@
+{
+  "appName": "QQL",
+  "appSubtitle": "Chat con PostgreSQL",
+  "send": "Enviar",
+  "stop": "Detener",
+  "clear": "Limpiar",
+  "settings": "Idioma y selección de tablas",
+  "inputPlaceholder": "Preguntá sobre tus datos… (Shift+Enter para nueva línea)",
+  "disclaimer": "Los resultados son de solo lectura. Verificá el SQL antes de usarlo en producción.",
+  "oneShotBanner": "Modo one-shot — no se envía historial de conversación al modelo",
+  "mode": {
+    "conversational": "Conversacional",
+    "oneshot": "One-shot"
+  },
+  "consulting": "Verificando disponibilidad de datos…",
+  "welcome": {
+    "title": "¿Qué querés saber?",
+    "exploring": "Explorando",
+    "hint": "Hacé una pregunta en lenguaje natural — el SQL se genera automáticamente.",
+    "dataReady": "Listo",
+    "skillBadge": "{{count}} abreviaturas aprendidas",
+    "skillLearning": "Aprendiendo abreviaturas…",
+    "analyzeButton": "Analizar datos",
+    "analyzeHint": "Escaneá tu catálogo de productos para aprender abreviaturas y mejorar las búsquedas.",
+    "analyzingMessages": [
+      "Escaneando catálogo de productos…",
+      "Detectando abreviaturas…",
+      "Construyendo mapa de siglas…",
+      "Aprendiendo tus datos…",
+      "Infiriendo patrones…"
+    ]
+  },
+  "onboarding": {
+    "step1Title": "Bienvenido a QQL",
+    "step1Subtitle": "Tus datos, tus preguntas.",
+    "chooseLanguage": "Elegí tu idioma",
+    "english": "English",
+    "spanish": "Español",
+    "step2Title": "¿Qué datos querés explorar?",
+    "step2Subtitle": "Seleccioná las tablas que querés incluir en el chat.",
+    "letsGo": "¡Empecemos →",
+    "back": "← Atrás"
+  },
+  "question": {
+    "optionLabel": "Seleccioná una opción o escribí tu respuesta abajo"
+  },
+  "error": {
+    "connection": "Error de conexión. ¿Está corriendo el backend?",
+    "retry": "Reintentar",
+    "newConversation": "Nueva conversación"
+  },
+  "analyst": {
+    "analyzing": "Analizando consulta...",
+    "title": "Análisis",
+    "show": "mostrar",
+    "hide": "ocultar"
+  },
+  "skill": {
+    "title": "Skill File",
+    "subtitle": "Gestionado por el agente EDA — editalo libremente",
+    "acronymsTitle": "Mapeo de Siglas",
+    "acronymsHint": "Abreviaturas que se expanden al buscar productos",
+    "colAcronym": "Sigla",
+    "colExpansion": "Expansión",
+    "addRow": "+ Agregar mapeo",
+    "newAcronymPlaceholder": "DDL",
+    "newExpansionPlaceholder": "Dulce de Leche",
+    "notesTitle": "Notas",
+    "notesPlaceholder": "Agregá notas de dominio aquí…",
+    "searchPlaceholder": "Buscar siglas…",
+    "searchEmpty": "No hay coincidencias para esa búsqueda.",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "reinfer": "↻ Re-inferir desde datos",
+    "reinferring": "Re-infiriendo…",
+    "empty": "Todavía no hay abreviaturas aprendidas.",
+    "emptyHint": "Cerrá este panel y hacé clic en \"Analizar datos\" para escanear tu catálogo.",
+    "emptyAction": "Cerrar y analizar",
+    "saveSuccess": "Guardado",
+    "errorLoad": "Error al cargar el skill file",
+    "errorSave": "Error al guardar el skill file",
+    "reinferError": "Error al re-inferir",
+    "reinferHint": "Esto puede tardar un minuto — la IA está leyendo tus productos"
+  },
+  "eda": {
+    "stopButton": "Detener",
+    "stopping": "Deteniendo…",
+    "phase": {
+      "discover": "Descubrir esquema de tabla",
+      "profile": "Perfilar columnas",
+      "interpret": "Interpretación IA",
+      "context": "Escribir contexto de datos",
+      "skill": "Actualizar skill file"
+    }
+  },
+  "dataContext": {
+    "title": "Contexto de datos",
+    "subtitle": "Generado automáticamente por el agente EDA",
+    "openInWelcome": "Ver contexto de datos",
+    "loading": "Cargando…",
+    "errorLoad": "Error al cargar el contexto de datos",
+    "errorCopy": "Error al copiar",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "close": "Cerrar"
+  }
+}
